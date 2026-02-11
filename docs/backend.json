@@ -1,0 +1,52 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and financial data.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "balance": { "type": "number" },
+        "joinDate": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "country": { "type": "string" },
+        "avatar": { "type": "string" },
+        "isAdmin": { "type": "boolean" }
+      },
+      "required": ["id", "username", "email"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Financial transaction record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["Deposit", "Withdrawal", "Bonus"] },
+        "asset": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["Completed", "Pending", "Processing", "Approved", "Declined"] },
+        "date": { "type": "string" },
+        "address": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "type", "asset", "amount", "status", "date", "userId"]
+    }
+  },
+  "auth": {
+    "providers": ["password"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores user profile and account status."
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Centralized transaction store for all users."
+    }
+  }
+}

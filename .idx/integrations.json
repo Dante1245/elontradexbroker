@@ -1,0 +1,7 @@
+{
+  "firebase_hosting": {
+    "deploymentHostingUrl": "https://tradesim-nzmzh.web.app"
+  },
+  "cloud_run_deploy": {},
+  "google_maps_platform": {}
+}
