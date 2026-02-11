@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
@@ -41,8 +40,12 @@ import {
 } from "@/components/ui/form";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import Image from "next/image";
-import type { CryptoMarketData, User, Transaction } from "@/lib/types";
+import type { CryptoMarketData } from "@/lib/types";
 import { submitWithdrawalRequest } from "@/lib/actions";
+import { useFirestore, useUser } from "@/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const withdrawalSchema = z.object({
   amount: z.coerce
@@ -60,19 +63,19 @@ type WithdrawalFormValues = z.infer<typeof withdrawalSchema>;
 type DepositWalletInfo = { name: string; address: string; warning: string };
 type DepositWallets = { [key: string]: DepositWalletInfo };
 
-const COIN_IDS = "bitcoin,ethereum,tether,ripple,solana,dogecoin";
-
 const initialDepositWallets: DepositWallets = {
   btc: { name: "Bitcoin", address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", warning: "Only send BTC to this address." },
-  eth: { name: "Ethereum", address: "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B", warning: "Only send ETH (ERC-20) to this address." },
+  eth: { name: "Ethereum", address: "0xAb5801a7D398351b8bE11C439e05C5 bE11C439e05C5B3259aeC9B", warning: "Only send ETH (ERC-20) to this address." },
   usdt: { name: "Tether", address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", warning: "Only send USDT (ERC-20) to this address." },
   xrp: { name: "Ripple", address: "rEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh", warning: "Only send XRP to this address. Destination Tag may be required." },
   sol: { name: "Solana", address: "So11111111111111111111111111111111111111112", warning: "Only send SOL to this address." },
   doge: { name: "Dogecoin", address: "D7bA4w4zL1N7k1M3fQ5cZ6eP9aB8iGfT3k", warning: "Only send DOGE to this address." },
 };
 
-export function WalletCard({ user }: { user: User }) {
+export function WalletCard() {
   const { toast } = useToast();
+  const { user } = useUser();
+  const db = useFirestore();
   const [isPending, startTransition] = useTransition();
   const [cryptoData, setCryptoData] = useState<CryptoMarketData[]>([]);
   const [depositWallets, setDepositWallets] = useState<DepositWallets>(initialDepositWallets);
@@ -89,36 +92,13 @@ export function WalletCard({ user }: { user: User }) {
         console.error("Failed to fetch crypto data:", error);
       }
     };
-
-    const loadWalletAddresses = () => {
-        if (typeof window !== 'undefined') {
-            const storedWalletsRaw = localStorage.getItem('siteDepositWallets');
-            if (storedWalletsRaw) {
-                try {
-                  const storedWallets = JSON.parse(storedWalletsRaw);
-                  const updatedWallets: DepositWallets = { ...initialDepositWallets };
-                  for (const key in storedWallets) {
-                      if (updatedWallets[key]) {
-                          updatedWallets[key].address = storedWallets[key].address;
-                          updatedWallets[key].name = storedWallets[key].name;
-                      }
-                  }
-                  setDepositWallets(updatedWallets);
-                } catch (e) {
-                  console.error("Failed to parse wallet addresses from storage", e)
-                }
-            }
-        }
-    };
-    
     fetchMarketData();
-    loadWalletAddresses();
   }, []);
 
   const form = useForm<WithdrawalFormValues>({
     resolver: zodResolver(withdrawalSchema),
     defaultValues: {
- amount: 0,
+      amount: 0,
       asset: "bitcoin",
       address: "",
     },
@@ -137,48 +117,44 @@ export function WalletCard({ user }: { user: User }) {
   };
 
   const onSubmit = (values: WithdrawalFormValues) => {
+    if (!user) return;
+    
     startTransition(async () => {
-        const result = await submitWithdrawalRequest(values, user);
+        try {
+            const txData = {
+                userId: user.uid,
+                type: "Withdrawal",
+                asset: values.asset.toUpperCase(),
+                amount: values.amount,
+                address: values.address,
+                status: "Pending",
+                date: serverTimestamp(),
+            };
 
-        if (result.success) {
+            const txRef = collection(db, "transactions");
+            addDoc(txRef, txData).catch(async (err) => {
+                const permissionError = new FirestorePermissionError({
+                    path: txRef.path,
+                    operation: 'create',
+                    requestResourceData: txData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            });
+
             toast({
               title: "Success",
               description: "Your withdrawal request has been submitted for processing.",
             });
             form.reset();
-            window.dispatchEvent(new Event('storage'));
-        } else {
+        } catch (error: any) {
             toast({
               title: "Error",
-              description: result.error || "An unexpected error occurred.",
+              description: "An unexpected error occurred.",
               variant: "destructive",
             });
         }
     });
   };
-  
-  const renderSelectItem = (coin: CryptoMarketData) => {
-    return (
-        <SelectItem value={coin.id.toLowerCase()} key={coin.id}>
-            <div className="flex items-center gap-2">
-                <Image src={coin.image} alt={coin.name} width={20} height={20} />
-                <span>{coin.name} ({coin.symbol.toUpperCase()})</span>
-            </div>
-        </SelectItem>
-    );
-  };
-  
-   const renderDepositSelectItem = (coinKey: string, coinName: string) => {
-    const coinData = cryptoData.find(c => c.symbol.toLowerCase() === coinKey.toLowerCase());
-    return (
-         <SelectItem value={coinKey} key={coinKey}>
-            <div className="flex items-center gap-2">
-                {coinData && <Image src={coinData.image} alt={coinData.name} width={20} height={20} />}
-                <span>{coinName} ({coinKey.toUpperCase()})</span>
-            </div>
-        </SelectItem>
-    )
-  }
 
   return (
     <Card>
@@ -203,23 +179,21 @@ export function WalletCard({ user }: { user: User }) {
                         <SelectValue placeholder="Select an asset" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(depositWallets).map(([key, wallet]) => renderDepositSelectItem(key, wallet.name))}
+                      {Object.entries(depositWallets).map(([key, wallet]) => (
+                        <SelectItem value={key} key={key}>{wallet.name}</SelectItem>
+                      ))}
                     </SelectContent>
                 </Select>
              </div>
 
             {activeWallet && (
               <div className="flex flex-col items-center gap-4 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Scan the QR code or copy the address below to deposit {activeWallet.name} ({selectedDepositAsset.toUpperCase()}).
-                </p>
                 <div className="p-2 rounded-lg border bg-card shadow-sm">
                   <Image
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${depositWallets[selectedDepositAsset].address}`}
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${activeWallet.address}`}
                     alt="QR Code"
                     width={200}
                     height={200}
-                    key={selectedDepositAsset}
                     className="rounded-md"
                   />
                 </div>
@@ -228,7 +202,7 @@ export function WalletCard({ user }: { user: User }) {
                     type="text"
                     value={activeWallet.address}
                     readOnly
-                    className="pr-10 text-center sm:text-left font-mono text-xs"
+                    className="pr-10 text-center font-mono text-xs"
                   />
                   <Button
                     variant="ghost"
@@ -243,7 +217,7 @@ export function WalletCard({ user }: { user: User }) {
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Important</AlertTitle>
                   <AlertDescription>
-                    {activeWallet.warning} Sending any other asset may result in permanent loss.
+                    {activeWallet.warning}
                   </AlertDescription>
                 </Alert>
               </div>
@@ -265,7 +239,6 @@ export function WalletCard({ user }: { user: User }) {
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name="asset"
@@ -282,14 +255,15 @@ export function WalletCard({ user }: { user: User }) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {cryptoData.map(coin => renderSelectItem(coin))}
+                          {cryptoData.map(coin => (
+                            <SelectItem value={coin.id} key={coin.id}>{coin.name}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name="address"

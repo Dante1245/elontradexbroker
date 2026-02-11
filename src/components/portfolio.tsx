@@ -1,7 +1,5 @@
-
 "use client";
 
-import { useState, useEffect } from "react";
 import { DollarSign, Wallet } from "lucide-react";
 import {
   Card,
@@ -11,9 +9,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
-import { useUser, useDoc } from "@/firebase";
+import { useUser, useDoc, useFirestore } from "@/firebase";
 import { doc } from "firebase/firestore";
-import { useFirestore } from "@/firebase";
 
 export function Portfolio() {
   const { user, loading: authLoading } = useUser();

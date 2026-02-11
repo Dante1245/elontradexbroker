@@ -4,6 +4,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { SupportBot } from '@/components/support-bot';
 import { ThemeProvider } from '@/components/theme-provider';
+import { FirebaseClientProvider } from '@/firebase';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -20,6 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
+        <FirebaseClientProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -31,7 +34,9 @@ export default function RootLayout({
             </div>
             <Toaster />
             <SupportBot />
+            <FirebaseErrorListener />
           </ThemeProvider>
+        </FirebaseClientProvider>
       </body>
     </html>
   );

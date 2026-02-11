@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -17,6 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { IconLogo } from "./icons";
+import { useAuth } from "@/firebase";
+import { signOut } from "firebase/auth";
 
 const navLinks = [
     { href: "/", label: "Home" },
@@ -26,18 +27,12 @@ const navLinks = [
     { href: "/settings", label: "Settings" },
 ];
 
-
-function deleteCookie(name: string) {
-    document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-}
-
-
 export function DashboardHeader() {
   const router = useRouter();
+  const auth = useAuth();
 
-  const handleLogout = () => {
-    localStorage.removeItem('loggedInUser');
-    deleteCookie('loggedInUser');
+  const handleLogout = async () => {
+    await signOut(auth);
     router.push('/');
   };
 

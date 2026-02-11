@@ -30,12 +30,15 @@ import { Alert, AlertDescription } from "./ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { countries } from "@/lib/countries";
 import { ScrollArea } from "./ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth, useFirestore } from "@/firebase";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z.string().min(1, { message: "Password is required." }),
-  rememberMe: z.boolean().default(false).optional(),
 });
 
 const signupSchema = z.object({
@@ -53,6 +56,8 @@ const signupSchema = z.object({
 
 export function AuthForm({ type }: { type: "login" | "signup" }) {
   const router = useRouter();
+  const auth = useAuth();
+  const db = useFirestore();
   const isLogin = type === "login";
   const schema = isLogin ? loginSchema : signupSchema;
   type FormValues = z.infer<typeof schema>;
@@ -60,7 +65,7 @@ export function AuthForm({ type }: { type: "login" | "signup" }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: isLogin 
-      ? { email: "", password: "", rememberMe: false } 
+      ? { email: "", password: "" } 
       : { name: "", username: "", email: "", phoneNumber: "", country: "", password: "", confirmPassword: "" },
   });
 
@@ -72,64 +77,48 @@ export function AuthForm({ type }: { type: "login" | "signup" }) {
     setIsLoading(true);
     setError(null);
 
-    // Mock authentication for the prototype
-    setTimeout(() => {
+    try {
       if (isLogin) {
-        if (values.email === "admin@elontradex.live" && values.password === "admin123") {
-            const adminUser = {
-                id: "admin_1",
-                name: "Admin User",
-                username: "admin",
-                email: "admin@elontradex.live",
-                balance: 1000000,
-                joinDate: "2024-01-01",
-                isAdmin: true
-            };
-            localStorage.setItem('loggedInUser', JSON.stringify(adminUser));
-            router.push("/admin");
-            return;
-        }
-
-        const usersJson = localStorage.getItem('users');
-        const users = usersJson ? JSON.parse(usersJson) : [];
-        const user = users.find((u: any) => u.email === values.email && u.password === values.password);
-
-        if (user) {
-          localStorage.setItem('loggedInUser', JSON.stringify(user));
-          router.push("/dashboard");
+        await signInWithEmailAndPassword(auth, values.email, values.password);
+        if (values.email === "admin@elontradex.live") {
+          router.push("/admin");
         } else {
-          setError("Invalid email or password.");
-          setIsLoading(false);
+          router.push("/dashboard");
         }
       } else {
         const signupValues = values as z.infer<typeof signupSchema>;
-        const newUser = {
-          id: `user_${Math.random().toString(36).substr(2, 9)}`,
-          ...signupValues,
+        const userCredential = await createUserWithEmailAndPassword(auth, signupValues.email, signupValues.password);
+        const user = userCredential.user;
+
+        const userDocRef = doc(db, "users", user.uid);
+        const userData = {
+          id: user.uid,
+          name: signupValues.name,
+          username: signupValues.username,
+          email: signupValues.email,
+          phoneNumber: signupValues.phoneNumber,
+          country: signupValues.country,
           balance: 200.00,
-          joinDate: new Date().toISOString().split('T')[0],
-          transactions: [
-              {
-                  id: `txn_${Math.random().toString(36).substr(2, 9)}`,
-                  type: "Bonus",
-                  asset: "USDT",
-                  amount: 200,
-                  status: "Completed",
-                  date: new Date().toISOString().split('T')[0]
-              }
-          ]
+          joinDate: serverTimestamp(),
+          isAdmin: false,
         };
 
-        const usersJson = localStorage.getItem('users');
-        const users = usersJson ? JSON.parse(usersJson) : [];
-        users.push(newUser);
-        localStorage.setItem('users', JSON.stringify(users));
-        localStorage.setItem('loggedInUser', JSON.stringify(newUser));
+        setDoc(userDocRef, userData).catch(async (err) => {
+          const permissionError = new FirestorePermissionError({
+            path: userDocRef.path,
+            operation: 'create',
+            requestResourceData: userData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        });
+
         localStorage.setItem('showBonusPopup', 'true');
-        
         router.push("/dashboard");
       }
-    }, 1500);
+    } catch (err: any) {
+      setError(err.message);
+      setIsLoading(false);
+    }
   };
   
   return (
