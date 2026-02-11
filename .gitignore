@@ -1,47 +1,27 @@
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-/package-lock.json
-
-# testing
-/coverage
-
-# next.js
+# Next.js
 /.next/
 /out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# local env files
-.env*.local
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
 
 # Firebase
 .firebase/
 firebase-debug.log*
 firestore-debug.log*
-pubsub-debug.log*
 ui-debug.log*
-firebase-export-*/
-.firebaserc
 
-# Large webpack/cache packs
-*.pack
-*.node
+# Production build artifacts causing push issues
+.firebase/*/functions/.next/
+.firebase/*/functions/node_modules/
+
+# Dependencies
+/node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+*.env.local
+
+# VScode
+.vscode/

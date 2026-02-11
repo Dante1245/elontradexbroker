@@ -21,9 +21,6 @@ export function initializeFirebase(): { app: FirebaseApp; auth: Auth; db: Firest
   return { app, auth, db };
 }
 
-/**
- * Stabilizes a Firebase reference or query to avoid infinite re-renders.
- */
 export function useMemoFirebase<T>(factory: () => T, deps: any[]): T {
   const ref = useRef<T | null>(null);
   const depsRef = useRef<any[]>([]);

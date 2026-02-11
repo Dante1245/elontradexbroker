@@ -3,7 +3,7 @@
 // This file is managed by Firebase Studio.
 // The firebaseConfig object is automatically populated.
 export const firebaseConfig = {
-  apiKey: "AIzaSy...",
+  apiKey: "AIzaSy...", // Placeholder, will be replaced by actual config during deployment
   authDomain: "elontradexbroker.firebaseapp.com",
   projectId: "elontradexbroker",
   storageBucket: "elontradexbroker.firebasestorage.app",
