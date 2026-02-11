@@ -10,7 +10,19 @@ const nextConfig = {
             },
             {
                 protocol: 'https',
+                hostname: 'images.cryptocompare.com',
+                port: '',
+                pathname: '/**',
+            },
+            {
+                protocol: 'https',
                 hostname: 'images.unsplash.com',
+                port: '',
+                pathname: '/**',
+            },
+            {
+                protocol: 'https',
+                hostname: 'coin-images.coingecko.com',
                 port: '',
                 pathname: '/**',
             },
@@ -25,7 +37,19 @@ const nextConfig = {
                 hostname: 'randomuser.me',
                 port: '',
                 pathname: '/**',
-            }
+            },
+            {
+                protocol: 'https',
+                hostname: 'placehold.co',
+                port: '',
+                pathname: '/**',
+            },
+            {
+                protocol: 'https',
+                hostname: 'i.pravatar.cc',
+                port: '',
+                pathname: '/**',
+            },
         ],
     },
 };
