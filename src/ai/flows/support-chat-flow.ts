@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A conversational AI flow for the ElonTradeX support bot.
@@ -10,7 +9,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { googleAI } from '@genkit-ai/googleai';
 
 const SupportChatInputSchema = z.object({
   message: z.string().describe("The user's message or question to the support bot."),
@@ -29,7 +27,6 @@ const prompt = ai.definePrompt({
   name: 'supportChatPrompt',
   input: {schema: SupportChatInputSchema},
   output: {schema: SupportChatOutputSchema.nullable()},
-  model: googleAI.model('gemini-pro'),
   prompt: `You are "Xavier", the friendly and helpful AI support assistant for ElonTradeX, a cutting-edge cryptocurrency trading platform.
 
 **IMPORTANT:** First, detect the language of the user's question. You MUST respond in the same language.

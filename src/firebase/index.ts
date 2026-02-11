@@ -8,13 +8,13 @@ export * from './firestore/use-collection';
 export * from './errors';
 export * from './error-emitter';
 
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
+import { getFirestore, type Firestore } from 'firebase/firestore';
 import { firebaseConfig } from './config';
 import { useRef } from 'react';
 
-export function initializeFirebase() {
+export function initializeFirebase(): { app: FirebaseApp; auth: Auth; db: Firestore } {
   const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
   const auth = getAuth(app);
   const db = getFirestore(app);
